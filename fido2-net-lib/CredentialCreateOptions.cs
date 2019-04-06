@@ -1,9 +1,6 @@
 ﻿using Fido2NetLib.Objects;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using System;
 using System.Collections.Generic;
-using System.Globalization;
 using static Fido2NetLib.Fido2;
 
 namespace Fido2NetLib
@@ -50,7 +47,10 @@ namespace Fido2NetLib
         /// </summary>
         [JsonProperty("attestation")]
         public AttestationConveyancePreference Attestation { get; set; } = AttestationConveyancePreference.None;
-
+        
+        /// <summary>
+        /// This member is intended for use by Relying Parties that wish to select the appropriate authenticators to participate in the create() operation.
+        /// </summary>
         [JsonProperty("authenticatorSelection")]
         public AuthenticatorSelection AuthenticatorSelection { get; set; }
 
@@ -60,7 +60,13 @@ namespace Fido2NetLib
         [JsonProperty("excludeCredentials")]
         public List<PublicKeyCredentialDescriptor> ExcludeCredentials { get; set; }
 
-        public static CredentialCreateOptions Create(Configuration config, byte[] challenge, User user, AuthenticatorSelection authenticatorSelection, AttestationConveyancePreference attestationConveyancePreference, List<PublicKeyCredentialDescriptor> excludeCredentials)
+        /// <summary>
+        /// This OPTIONAL member contains additional parameters requesting additional processing by the client and authenticator. For example, if transaction confirmation is sought from the user, then the prompt string might be included as an extension.
+        /// </summary>
+        [JsonProperty("extensions", NullValueHandling = NullValueHandling.Ignore)]
+        public AuthenticationExtensionsClientInputs Extensions { get; set; }
+
+        public static CredentialCreateOptions Create(Configuration config, byte[] challenge, User user, AuthenticatorSelection authenticatorSelection, AttestationConveyancePreference attestationConveyancePreference, List<PublicKeyCredentialDescriptor> excludeCredentials, AuthenticationExtensionsClientInputs extensions)
         {
             return new CredentialCreateOptions
             {
@@ -82,12 +88,11 @@ namespace Fido2NetLib
                     ES512,
                     RS512,
                     PS512,
-                    RS1
                 },
                 AuthenticatorSelection = authenticatorSelection,
                 Attestation = attestationConveyancePreference,
-                ExcludeCredentials = excludeCredentials ?? new List<PublicKeyCredentialDescriptor>()
-
+                ExcludeCredentials = excludeCredentials ?? new List<PublicKeyCredentialDescriptor>(),
+                Extensions = extensions
             };
         }
 
@@ -104,53 +109,48 @@ namespace Fido2NetLib
         private static PubKeyCredParam ES256 = new PubKeyCredParam()
         {
             // External authenticators support the ES256 algorithm
-            Type = "public-key",
+            Type = PublicKeyCredentialType.PublicKey,
             Alg = -7
         };
         private static PubKeyCredParam ES384 = new PubKeyCredParam()
         {
-            Type = "public-key",
+            Type = PublicKeyCredentialType.PublicKey,
             Alg = -35
         };
         private static PubKeyCredParam ES512 = new PubKeyCredParam()
         {
-            Type = "public-key",
+            Type = PublicKeyCredentialType.PublicKey,
             Alg = -36
-        };
-        private static PubKeyCredParam RS1 = new PubKeyCredParam()
-        {
-            Type = "public-key",
-            Alg = -65535
         };
         private static PubKeyCredParam RS256 = new PubKeyCredParam()
         {
             // Windows Hello supports the RS256 algorithm
-            Type = "public-key",
+            Type = PublicKeyCredentialType.PublicKey,
             Alg = -257
         };
         private static PubKeyCredParam RS384 = new PubKeyCredParam()
         {
-            Type = "public-key",
+            Type = PublicKeyCredentialType.PublicKey,
             Alg = -258
         };
         private static PubKeyCredParam RS512 = new PubKeyCredParam()
         {
-            Type = "public-key",
+            Type = PublicKeyCredentialType.PublicKey,
             Alg = -259
         };
         private static PubKeyCredParam PS256 = new PubKeyCredParam()
         {
-            Type = "public-key",
+            Type = PublicKeyCredentialType.PublicKey,
             Alg = -37
         };
         private static PubKeyCredParam PS384 = new PubKeyCredParam()
         {
-            Type = "public-key",
+            Type = PublicKeyCredentialType.PublicKey,
             Alg = -38
         };
         private static PubKeyCredParam PS512 = new PubKeyCredParam()
         {
-            Type = "public-key",
+            Type = PublicKeyCredentialType.PublicKey,
             Alg = -39
         };
     }
@@ -161,7 +161,7 @@ namespace Fido2NetLib
         /// The type member specifies the type of credential to be created.
         /// </summary>
         [JsonProperty("type")]
-        public string Type { get; set; }
+        public PublicKeyCredentialType Type { get; set; }
 
         /// <summary>
         /// The alg member specifies the cryptographic signature algorithm with which the newly generated credential will be used, and thus also the type of asymmetric key pair to be generated, e.g., RSA or Elliptic Curve.
@@ -177,7 +177,6 @@ namespace Fido2NetLib
             Name = name;
             Id = id;
         }
-
 
         /// <summary>
         /// A unique identifier for the Relying Party entity, which sets the RP ID.
@@ -200,8 +199,8 @@ namespace Fido2NetLib
         /// <summary>
         /// If this member is present, eligible authenticators are filtered to only authenticators attached with the specified §5.4.5 Authenticator Attachment enumeration (enum AuthenticatorAttachment).
         /// </summary>
-        [JsonProperty("authenticatorAttachment")]
-        public AuthenticatorAttachment AuthenticatorAttachment { get; set; }
+        [JsonProperty("authenticatorAttachment", NullValueHandling = NullValueHandling.Ignore)]
+        public AuthenticatorAttachment? AuthenticatorAttachment { get; set; }
 
         /// <summary>
         /// This member describes the Relying Parties' requirements regarding resident credentials. If the parameter is set to true, the authenticator MUST create a client-side-resident public key credential source when creating a public key credential.

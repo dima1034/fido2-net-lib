@@ -2,7 +2,7 @@
 <html lang="en">
 
     <head>
-        <title>WebAuthn.io</title>
+        <title>FIDO2 .NET lib Demo</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
@@ -32,33 +32,21 @@
                 <p>You've logged in to an account using WebAuthn</p>
                 <a class="btn btn-lg btn-primary" href="https://www.w3.org/TR/webauthn/" role="button">Read the WebAuthn Spec »</a>
             </div>
-            <div class="panel panel-default">    
-                <h3>Credentials for {{ .User }}</h3>
+            <div class="panel panel-default">
+                <h3>Credentials for {0}</h3>
                 <table class="table">
                     <tr>
-                        <th>Type</th>
+                        <th> Attestation Type</th>
                         <th class="no-wrap">Create Date</th>
-                        <th>ID</th>
-                        <th>Public Key</th>                    
+                        <th>Counter</th>
+                        <th>AAGUID</th>
+                        <th>Description</th>
+                        <th>Public Key</th>
                     </tr>
-                    {{ range $index, $element := .Credentials }}
-                    <tr>
-                        <td class="format no-wrap">{{ .CredType }}</td>
-                        <td class="no-wrap">{{ .CreateDate }}</td>
-                        <td class="break">{{ .CredID }}</td>
-                        <td>
-                            <table class="sub-table">
-                                <tr>
-                                    <td><pre>X:{{ .PubKeyX }}</pre></td>                    
-                                </tr>                        
-                                <tr>
-                                    <td><pre>Y:{{ .PubKeyY }}</pre></td>                    
-                                </tr>                        
-                            </table>
-                        </td>
-                    {{ end }}
+                    {1}
                 </table>
             </div>
-        </div>        
+            <a class="btn btn-lg btn-primary" href="javascript:history.back()" role="button">Back</a>
+        </div> 
     </body>
 </html>

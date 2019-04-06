@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Fido2NetLib.Objects;
@@ -77,9 +75,9 @@ namespace Fido2NetLib
         /// </summary>
         /// <returns></returns>
         /// <param name="excludeCredentials">Recommended. This member is intended for use by Relying Parties that wish to limit the creation of multiple credentials for the same account on a single authenticator.The client is requested to return an error if the new credential would be created on an authenticator that also contains one of the credentials enumerated in this parameter.</param>
-        public CredentialCreateOptions RequestNewCredential(User user, List<PublicKeyCredentialDescriptor> excludeCredentials)
+        public CredentialCreateOptions RequestNewCredential(User user, List<PublicKeyCredentialDescriptor> excludeCredentials, AuthenticationExtensionsClientInputs extensions = null)
         {
-            return RequestNewCredential(user, excludeCredentials, AuthenticatorSelection.Default, AttestationConveyancePreference.None);
+            return RequestNewCredential(user, excludeCredentials, AuthenticatorSelection.Default, AttestationConveyancePreference.None, extensions);
         }
 
         /// <summary>
@@ -88,13 +86,13 @@ namespace Fido2NetLib
         /// <returns></returns>
         /// <param name="attestationPreference">This member is intended for use by Relying Parties that wish to express their preference for attestation conveyance. The default is none.</param>
         /// <param name="excludeCredentials">Recommended. This member is intended for use by Relying Parties that wish to limit the creation of multiple credentials for the same account on a single authenticator.The client is requested to return an error if the new credential would be created on an authenticator that also contains one of the credentials enumerated in this parameter.</param>
-        public CredentialCreateOptions RequestNewCredential(User user, List<PublicKeyCredentialDescriptor> excludeCredentials, AuthenticatorSelection authenticatorSelection, AttestationConveyancePreference attestationPreference)
+        public CredentialCreateOptions RequestNewCredential(User user, List<PublicKeyCredentialDescriptor> excludeCredentials, AuthenticatorSelection authenticatorSelection, AttestationConveyancePreference attestationPreference, AuthenticationExtensionsClientInputs extensions = null)
         {
             // note: I have no idea if this crypto is ok...
             var challenge = new byte[Config.ChallengeSize];
             _crypto.GetBytes(challenge);
 
-            var options = CredentialCreateOptions.Create(Config, challenge, user, authenticatorSelection, attestationPreference, excludeCredentials);
+            var options = CredentialCreateOptions.Create(Config, challenge, user, authenticatorSelection, attestationPreference, excludeCredentials, extensions);
             return options;
         }
 
@@ -117,12 +115,12 @@ namespace Fido2NetLib
         /// Returns AssertionOptions including a challenge to the browser/authr to assert existing credentials and authenticate a user.
         /// </summary>
         /// <returns></returns>
-        public AssertionOptions GetAssertionOptions(IEnumerable<PublicKeyCredentialDescriptor> allowedCredentials, UserVerificationRequirement userVerification)
+        public AssertionOptions GetAssertionOptions(IEnumerable<PublicKeyCredentialDescriptor> allowedCredentials, UserVerificationRequirement? userVerification, AuthenticationExtensionsClientInputs extensions = null)
         {
             var challenge = new byte[Config.ChallengeSize];
             _crypto.GetBytes(challenge);
 
-            var options = AssertionOptions.Create(Config, challenge, allowedCredentials, userVerification);
+            var options = AssertionOptions.Create(Config, challenge, allowedCredentials, userVerification, extensions);
             return options;
         }
 

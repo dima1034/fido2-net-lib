@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Net;
 using System.Threading.Tasks;
 using Fido2NetLib;
 using Fido2NetLib.Development;
@@ -24,18 +24,27 @@ namespace Fido2Demo
          * 
          * 
          */
-    private static readonly DevelopmentInMemoryStore DemoStorage = new DevelopmentInMemoryStore();
+        private static readonly DevelopmentInMemoryStore DemoStorage = new DevelopmentInMemoryStore();
 
-        private Fido2NetLib.Fido2 _lib;
+        private Fido2 _lib;
+        private IMetadataService _mds;
+        private string _origin;
 
         public TestController(IConfiguration config)
         {
-            _lib = new Fido2(new Fido2NetLib.Fido2.Configuration()
+            // Sample bogus key from https://fidoalliance.org/metadata/
+            var invalidToken = "6d6b44d78b09fed0c5559e34c71db291d0d322d4d4de0000";
+            _origin = config["fido2:origin"];
+            _mds = MDSMetadata.ConformanceInstance(invalidToken, config["fido2:MDSCacheDirPath"], _origin);
+            if (false == _mds.IsInitialized())
+                _mds.Initialize().Wait();
+            
+            _lib = new Fido2(new Fido2.Configuration()
             {
                 ServerDomain = config["fido2:serverDomain"],
                 ServerName = "Fido2 test",
-                Origin = config["fido2:origin"],
-                MetadataService = MDSMetadata.Instance(config["fido2:MDSAccessKey"], config["fido2:MDSCacheDirPath"])
+                Origin = _origin,
+                MetadataService = _mds
             });
         }
 
@@ -43,24 +52,39 @@ namespace Fido2Demo
         [Route("/attestation/options")]
         public JsonResult MakeCredentialOptionsTest([FromBody] TEST_MakeCredentialParams opts)
         {
-            
+
             var attType = opts.Attestation;
-            
-            var username = opts.Username;
+
+            var username = new byte[] { };
+
+            try
+            {
+                username = Base64Url.Decode(opts.Username);
+            }
+            catch(FormatException)
+            {
+                username = System.Text.Encoding.UTF8.GetBytes(opts.Username);
+            }
 
             // 1. Get user from DB by username (in our example, auto create missing users)
-            var user = DemoStorage.GetOrAddUser(username, () => new User
+            var user = DemoStorage.GetOrAddUser(opts.Username, () => new User
             {
                 DisplayName = opts.DisplayName,
-                Name = username,
-                Id = Base64Url.Decode(username) // byte representation of userID is required
+                Name = opts.Username,
+                Id = username // byte representation of userID is required
             });
 
             // 2. Get user existing keys by username
-            List<PublicKeyCredentialDescriptor> existingKeys = DemoStorage.GetCredentialsByUser(user).Select(c => c.Descriptor).ToList();
+            var existingKeys = DemoStorage.GetCredentialsByUser(user).Select(c => c.Descriptor).ToList();
 
+            //var exts = new AuthenticationExtensionsClientInputs() { Extensions = true, UserVerificationIndex = true, Location = true, UserVerificationMethod = true, BiometricAuthenticatorPerformanceBounds = new AuthenticatorBiometricPerfBounds { FAR = float.MaxValue, FRR = float.MaxValue } };
+            var exts = new AuthenticationExtensionsClientInputs() {  };
+            if (null != opts.Extensions
+                && null != opts.Extensions.Example)
+
+                exts.Example = opts.Extensions.Example;
             // 3. Create options
-            var options = _lib.RequestNewCredential(user, existingKeys, opts.AuthenticatorSelection, opts.Attestation);
+            var options = _lib.RequestNewCredential(user, existingKeys, opts.AuthenticatorSelection, opts.Attestation, exts);
 
             // 4. Temporarily store options, session/in-memory cache/redis/db
             HttpContext.Session.SetString("fido2.attestationOptions", options.ToJson());
@@ -81,7 +105,7 @@ namespace Fido2Demo
             // 2. Create callback so that lib can verify credential id is unique to this user
             IsCredentialIdUniqueToUserAsyncDelegate callback = async (IsCredentialIdUniqueToUserParams args) =>
             {
-                List<User> users = await DemoStorage.GetUsersByCredentialIdAsync(args.CredentialId);
+                var users = await DemoStorage.GetUsersByCredentialIdAsync(args.CredentialId);
                 if (users.Count > 0) return false;
 
                 return true;
@@ -113,14 +137,22 @@ namespace Fido2Demo
             if (user == null) return NotFound("username was not registered");
 
             // 2. Get registered credentials from database
-            List<PublicKeyCredentialDescriptor> existingCredentials = DemoStorage.GetCredentialsByUser(user).Select(c => c.Descriptor).ToList();
+            var existingCredentials = DemoStorage.GetCredentialsByUser(user).Select(c => c.Descriptor).ToList();
 
             var uv = assertionClientParams.UserVerification;
-            if (null != assertionClientParams.authenticatorSelection && null == assertionClientParams.UserVerification) uv = assertionClientParams.authenticatorSelection.UserVerification;
+            if (null != assertionClientParams.authenticatorSelection) uv = assertionClientParams.authenticatorSelection.UserVerification;
+
+            var exts = new AuthenticationExtensionsClientInputs() { AppID = _origin, SimpleTransactionAuthorization = "FIDO", GenericTransactionAuthorization = new TxAuthGenericArg { ContentType = "text/plain", Content = new byte[] { 0x46, 0x49, 0x44, 0x4F } }, UserVerificationIndex = true, Location = true, UserVerificationMethod = true };
+            if (null != assertionClientParams.Extensions
+                && null != assertionClientParams.Extensions.Example)
+
+                exts.Example = assertionClientParams.Extensions.Example;
+
             // 3. Create options
             var options = _lib.GetAssertionOptions(
                 existingCredentials,
-                uv
+                uv,
+                exts
             );
 
             // 4. Temporarily store options, session/in-memory cache/redis/db
@@ -139,7 +171,7 @@ namespace Fido2Demo
             var options = AssertionOptions.FromJson(jsonOptions);
 
             // 2. Get registered credential from database
-            StoredCredential creds = DemoStorage.GetCredentialById(clientResponse.Id);
+            var creds = DemoStorage.GetCredentialById(clientResponse.Id);
 
             // 3. Get credential counter from database
             var storedCounter = creds.SignatureCounter;
@@ -147,7 +179,7 @@ namespace Fido2Demo
             // 4. Create callback to check if userhandle owns the credentialId
             IsUserHandleOwnerOfCredentialIdAsync callback = async (args) =>
             {
-                List<StoredCredential> storedCreds = await DemoStorage.GetCredentialsByUserHandleAsync(args.UserHandle);
+                var storedCreds = await DemoStorage.GetCredentialsByUserHandleAsync(args.UserHandle);
                 return storedCreds.Exists(c => c.Descriptor.Id.SequenceEqual(args.CredentialId));
             };
 
@@ -157,7 +189,7 @@ namespace Fido2Demo
             // 6. Store the updated counter
             DemoStorage.UpdateCounter(res.CredentialId, res.Counter);
 
-            var testRes = new 
+            var testRes = new
             {
                 status = "ok",
                 errorMessage = ""
@@ -178,8 +210,9 @@ namespace Fido2Demo
         public class TEST_AssertionClientParams
         {
             public string Username { get; set; }
-            public UserVerificationRequirement UserVerification { get; set; }
+            public UserVerificationRequirement? UserVerification { get; set; }
             public AuthenticatorSelection authenticatorSelection { get; set; }
+            public AuthenticationExtensionsClientOutputs Extensions { get; set; }
         }
 
         public class TEST_MakeCredentialParams
@@ -188,6 +221,7 @@ namespace Fido2Demo
             public string Username { get; set; }
             public AttestationConveyancePreference Attestation { get; set; }
             public AuthenticatorSelection AuthenticatorSelection { get; set; }
+            public AuthenticationExtensionsClientOutputs Extensions { get; set; }
         }
     }
 }

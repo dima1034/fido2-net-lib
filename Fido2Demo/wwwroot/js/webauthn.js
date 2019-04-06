@@ -139,7 +139,7 @@ function makeCredential() {
     data.append('username', state.user.name);
     data.append('attType', attestation_type);
     data.append('authType', authenticator_attachment);
-    data.append('userVerifcation', user_verification);
+    data.append('userVerification', user_verification);
     data.append('requireResidentKey', require_resident_key);
 
     fetch('/makeCredentialOptions', {
@@ -183,7 +183,7 @@ function makeCredential() {
             console.log("Credential Options Formatted");
             console.log(makeCredentialOptions);
 
-            swal({
+            Swal.fire({
                 title: 'Registering...',
                 text: 'Tap your security key to finish registration.',
                 imageUrl: "/images/securitykey.min.svg",
@@ -209,7 +209,7 @@ function makeCredential() {
                 registerNewCredential(newCredential);
             }).catch(function (err) {
                 console.log(err);
-                swal.closeModal();
+                Swal.closeModal();
                 showErrorAlert(err.message ? err.message : err);
             });
         });
@@ -221,11 +221,11 @@ function registerNewCredential(newCredential) {
     let attestationObject = new Uint8Array(newCredential.response.attestationObject);
     let clientDataJSON = new Uint8Array(newCredential.response.clientDataJSON);
     let rawId = new Uint8Array(newCredential.rawId);
-
     const data = {
         id: newCredential.id,
         rawId: b64enc(rawId),
         type: newCredential.type,
+        extensions: newCredential.getClientExtensionResults(),
         response: {
             AttestationObject: b64RawEnc(attestationObject),
             clientDataJson: b64RawEnc(clientDataJSON)
@@ -249,18 +249,18 @@ function registerNewCredential(newCredential) {
             if (response.status !== "ok") {
                 console.log("Error creating credential");
                 console.log(response.errorMessage);
-                swal.closeModal();
+                Swal.closeModal();
                 showErrorAlert(response.errorMessage);
                 return;
             }
 
-            swal({
+            Swal.fire({
                 title: 'Registration Successful!',
                 text: 'You\'ve registered successfully.',
                 type: 'success',
                 timer: 2000
             });
-            //window.location.href = "/dashboard/" + state.user.displayName;
+            window.location.href = "/dashboard/" + state.user.displayName;
         });
 }
 
@@ -280,8 +280,10 @@ function getAssertion() {
         return;
     }
     setUser();
+    var user_verification = $('#select-userVerification').find(':selected').val();
     var data = new FormData();
     data.append('username', state.user.name);
+    data.append('userVerification', user_verification);
 
     fetch('/assertionOptions', {
         method: 'POST', // or 'PUT'
@@ -318,7 +320,7 @@ function getAssertion() {
             });
             console.log(makeAssertionOptions);
 
-            swal({
+            Swal.fire({
                 title: 'Logging In...',
                 text: 'Tap your security key to login.',
                 imageUrl: "/images/securitykey.min.svg",
@@ -341,7 +343,7 @@ function getAssertion() {
                 }).catch(function (err) {
                     console.log(err);
                     showErrorAlert(err.message ? err.message : err);
-                    swal.closeModal();
+                    Swal.closeModal();
                 });
         });
 }
@@ -356,6 +358,7 @@ function verifyAssertion(assertedCredential) {
         id: assertedCredential.id,
         rawId: b64enc(rawId),
         type: assertedCredential.type,
+        extensions: assertedCredential.getClientExtensionResults(),
         response: {
             authenticatorData: b64RawEnc(authData),
             clientDataJson: b64RawEnc(clientDataJSON),
@@ -380,18 +383,18 @@ function verifyAssertion(assertedCredential) {
             if (response.status !== "ok") {
                 console.log("Error doing assertion");
                 console.log(response.errorMessage);
-                swal.closeModal();
+                Swal.closeModal();
                 showErrorAlert(response.errorMessage);
                 return;
             }
 
-            swal({
+            Swal.fire({
                 title: 'Logged In!',
                 text: 'You\'re logged in successfully.',
                 type: 'success',
                 timer: 2000
             });
-            //window.location.href = "/dashboard/" + state.user.displayName;
+            window.location.href = "/dashboard/" + state.user.displayName;
         });
 }
 

@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Fido2NetLib.Objects;
 
 namespace Fido2NetLib
 {
@@ -9,11 +10,15 @@ namespace Fido2NetLib
     {
         [JsonConverter(typeof(Base64UrlConverter))]
         public byte[] Id { get; set; }
+
         [JsonConverter(typeof(Base64UrlConverter))]
         public byte[] RawId { get; set; }
 
-        public string Type { get; set; }
+        public PublicKeyCredentialType? Type { get; set; }
+
         public ResponseData Response { get; set; }
+
+        public AuthenticationExtensionsClientOutputs Extensions { get; set; }
 
         public class ResponseData
         {
@@ -23,7 +28,6 @@ namespace Fido2NetLib
             public byte[] ClientDataJson { get; set; }
         }
     }
-
 
     //public class Fido2CreateResponse : Fido2Response
     //{

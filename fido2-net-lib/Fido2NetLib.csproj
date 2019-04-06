@@ -1,30 +1,39 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../lib/CBOR/CBOR.Include.props" />
+  <Import Project="../lib/Chaos.NaCL/Chaos.NaCL.Include.props" />
+  <Import Project="../lib/Asn1Processor/Asn1Processor.Include.props" />
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>1.0.0-preview</Version>
+    <TargetFrameworks>netstandard2.0;netcoreapp2.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(OS)' != 'Unix'">netstandard2.0;net472;netcoreapp2.0</TargetFrameworks>
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>Fido2</PackageId>
+    <Version>1.0.0-preview3</Version>
     <Description>FIDO2 .NET library (WebAuthn)</Description>
     <RepositoryUrl>https://github.com/abergs/fido2-net-lib</RepositoryUrl>
-    <RepositoryType>github</RepositoryType>
+    <RepositoryType>git</RepositoryType>
     <PackageTags>fido2 webauthn</PackageTags>
     <PackageReleaseNotes>Initial release</PackageReleaseNotes>
-    <PackageId>Fido2</PackageId>
     <PackageProjectUrl>https://github.com/abergs/fido2-net-lib</PackageProjectUrl>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <UserSecretsId>fido2-net-lib-72797092-61BA-45E3-836A-53F282CFFAF3</UserSecretsId>
     <PackageLicenseUrl>https://github.com/abergs/fido2-net-lib/blob/master/LICENSE.txt</PackageLicenseUrl>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="2.2.0-preview2-35157" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
-    <PackageReference Include="PeterO.Cbor" Version="3.2.1" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="5.2.4" />
     <PackageReference Include="System.Memory" Version="4.5.1" />
+    <PackageReference Include="System.Net.Http" />
     <PackageReference Include="System.Security.Cryptography.Cng" Version="4.5.0" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta-63127-02" PrivateAssets="All"/>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta-63127-02" PrivateAssets="All" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="build/fido2.targets" PackagePath="build/" />
+  </ItemGroup>
 </Project>

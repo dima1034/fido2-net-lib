@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Fido2NetLib.Objects;
 
@@ -71,6 +70,8 @@ namespace Fido2NetLib.Development
         public byte[] PublicKey { get; set; }
         public byte[] UserHandle { get; set; }
         public uint SignatureCounter { get; set; }
-
+        public string CredType { get; set; }
+        public DateTime RegDate { get; set; }
+        public Guid AaGuid { get; set; }
     }
 }
